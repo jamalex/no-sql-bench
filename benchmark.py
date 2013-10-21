@@ -8,19 +8,20 @@ import bench_offtheshelf
 import bench_nosqlite
 
 from math import sqrt
-from time import time
+import time
+import csv
 
 dbs = {
     "sqlite3": bench_sqlite.BenchSQLite,
     "sqlite3_ind": bench_sqlite.BenchSQLiteIndexed,
     "couchdb": bench_couchdb.BenchCouchDB,
-    # "jsonstore": bench_jsonstore.BenchJsonStore,
+    "jsonstore": bench_jsonstore.BenchJsonStore,
     "mysql": bench_mysql.BenchMySQL,
     "mysql_ind": bench_mysql.BenchMySQLIndexed,
     "codernity_ind": bench_codernity.BenchCodernityDB,
     "mongodb": bench_mongo.BenchMongoDB,
     "offtheshelf": bench_offtheshelf.BenchOffTheShelf,
-    # "nosqlite": bench_nosqlite.BenchNoSQLite,
+    "nosqlite": bench_nosqlite.BenchNoSQLite,
 }
 
 def benchmark_function(cls, function, count=1000, iterations=5, **kwargs):
@@ -29,12 +30,14 @@ def benchmark_function(cls, function, count=1000, iterations=5, **kwargs):
     bench = cls(count=count)
     bench.create_records()
     
+    time.sleep(5)
+    
     for i in range(iterations):
         if function == "create_records":
             bench = cls(count=count)
-        start = time()
+        start = time.time()
         getattr(bench, function)(**kwargs)
-        stop = time()
+        stop = time.time()
         times.append(stop - start)
         
     return times
@@ -86,4 +89,14 @@ def test_output_format():
         except:
             raise Exception("Wrong format for database '%s':\n\n%r" % (db_name, value))
         print "%s: Success!" % db_name
-            
+
+def save_as_csv(results, filename="results.csv"):
+    with open(filename, "wb") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["DB Name", "Create 10000 records (seconds)", "Create 10000 records (factor)", "Lookup by ID (seconds)", "Lookup by ID (factor)", "Query by field (seconds)", "Query by field (factor)"])
+        for db_name in results["create_records"]:
+            row = [db_name]
+            row += [results["create_records"][db_name]["mean"], results["create_records"][db_name]["factor"]]
+            row += [results["lookup_by_id"][db_name]["mean"], results["lookup_by_id"][db_name]["factor"]]
+            row += [results["query"][db_name]["mean"], results["query"][db_name]["factor"]]
+            writer.writerow(row)
